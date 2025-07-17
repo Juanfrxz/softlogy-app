@@ -26,6 +26,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       // Guardar el accessToken en localStorage
       if (data && data.accessToken) {
         localStorage.setItem('token', data.accessToken);
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
         // Llamar a la función de éxito para actualizar la vista
         onLoginSuccess();
       } else {
