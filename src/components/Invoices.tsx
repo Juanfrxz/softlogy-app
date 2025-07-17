@@ -17,26 +17,36 @@ interface Invoice {
   foliopos?: string;
   medio_pago?: string;
   consumo?: number;
-  // Otros campos si es necesario
 }
 
 const PAGE_SIZE = 10;
 
-// Componente para mostrar la lista de facturas con paginación y más detalles
+// Componente para mostrar la lista de facturas con paginación y filtro
 const Invoices: React.FC<InvoicesProps> = ({ onLogout }) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [contratoId, setContratoId] = useState('');
+  const [searchContrato, setSearchContrato] = useState('');
 
-  // Obtener facturas al montar el componente
+  // Obtener facturas al montar el componente o cambiar de página/filtro
   useEffect(() => {
     const fetchInvoices = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getInvoices();
-        setInvoices(data || []);
+        const params: any = {
+          limit: PAGE_SIZE,
+          offset: (page - 1) * PAGE_SIZE,
+        };
+        if (searchContrato) {
+          params.contrato_id = searchContrato;
+        }
+        const data = await getInvoices(params);
+        setInvoices(data.facturas || []);
+        setTotalCount(data.totalCount || 0);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Error al obtener las facturas.');
       } finally {
@@ -44,13 +54,16 @@ const Invoices: React.FC<InvoicesProps> = ({ onLogout }) => {
       }
     };
     fetchInvoices();
-  }, []);
+  }, [page, searchContrato]);
 
-  // Calcular facturas a mostrar en la página actual (paginación frontend)
-  const startIdx = (page - 1) * PAGE_SIZE;
-  const endIdx = startIdx + PAGE_SIZE;
-  const pagedInvoices = invoices.slice(startIdx, endIdx);
-  const totalPages = Math.ceil(invoices.length / PAGE_SIZE);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  // Manejar el filtro de contrato_id
+  const handleFilter = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1); // Reiniciar a la primera página al buscar
+    setSearchContrato(contratoId.trim());
+  };
 
   return (
     <div className="container mt-5">
@@ -60,6 +73,25 @@ const Invoices: React.FC<InvoicesProps> = ({ onLogout }) => {
           Cerrar sesión
         </button>
       </div>
+      {/* Filtro por contrato_id */}
+      <form className="mb-3 d-flex gap-2" onSubmit={handleFilter}>
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Filtrar por Contrato ID"
+          value={contratoId}
+          onChange={e => setContratoId(e.target.value)}
+        />
+        <button className="btn btn-primary" type="submit">Buscar</button>
+        <button
+          className="btn btn-secondary"
+          type="button"
+          onClick={() => { setContratoId(''); setSearchContrato(''); setPage(1); }}
+          disabled={!contratoId && !searchContrato}
+        >
+          Limpiar
+        </button>
+      </form>
       {loading ? (
         <div className="alert alert-info">Cargando facturas...</div>
       ) : error ? (
@@ -81,12 +113,12 @@ const Invoices: React.FC<InvoicesProps> = ({ onLogout }) => {
               </tr>
             </thead>
             <tbody>
-              {pagedInvoices.length === 0 ? (
+              {invoices.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center">No hay facturas para mostrar.</td>
                 </tr>
               ) : (
-                pagedInvoices.map((inv) => (
+                invoices.map((inv) => (
                   <tr key={inv.id}>
                     <td>{inv.id}</td>
                     <td>{inv.id_factura || '-'}</td>

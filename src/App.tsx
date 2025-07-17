@@ -2,6 +2,7 @@ import Login from './components/Login';
 import Invoices from './components/Invoices';
 import { useState, useEffect } from 'react';
 import './App.css'
+import { logout as logoutService } from './services/authService';
 
 function App() {
   // Estado para saber si el usuario está autenticado
@@ -23,8 +24,15 @@ function App() {
   };
 
   // Función para cerrar sesión (logout)
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutService(); // Llama al endpoint real de logout
+    } catch (error) {
+      // Si hay error, igual limpiamos el localStorage
+      console.error('Error al hacer logout en el backend:', error);
+    }
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     setIsAuthenticated(false);
   };
 

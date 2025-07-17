@@ -10,8 +10,11 @@ export async function getInvoices(params = {}) {
     'Authorization': `Bearer ${token}`,
     'x-refresh-token': refreshToken || '',
   };
-  // Realiza la petición GET al endpoint de facturas
+  // Realiza la petición GET al endpoint de facturas con filtros y paginación
   const response = await axios.get(url, { headers, params });
-  // Devolver solo el array de facturas
-  return response.data.invoices;
+  // Devolver facturas y totalCount según la estructura del backend
+  return {
+    facturas: response.data.invoices,
+    totalCount: response.data.totalcount || response.data.totalCount || 0,
+  };
 } 
