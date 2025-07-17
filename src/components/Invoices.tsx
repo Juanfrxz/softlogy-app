@@ -23,15 +23,20 @@ const PAGE_SIZE = 10;
 
 // Componente para mostrar la lista de facturas con paginación y filtro
 const Invoices: React.FC<InvoicesProps> = ({ onLogout }) => {
+  // Estado que almacena la lista de facturas obtenidas del backend
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  // Estado que indica si se están cargando las facturas (muestra spinner o mensaje de carga)
   const [loading, setLoading] = useState(true);
+  // Estado para guardar mensajes de error en caso de que falle la obtención de datos
   const [error, setError] = useState<string | null>(null);
+  // Estado para la página actual de la paginación
   const [page, setPage] = useState(1);
+  // Estado que almacena el total de facturas (usado para calcular el número de páginas)
   const [totalCount, setTotalCount] = useState(0);
-  const [contratoId, setContratoId] = useState('');
-  const [searchContrato, setSearchContrato] = useState('');
+  // Estado único para los filtros dinámicos
+  const [filters, setFilters] = useState<any>({});
 
-  // Obtener facturas al montar el componente o cambiar de página/filtro
+  // Obtener facturas al montar el componente o cambiar de página/filtros
   useEffect(() => {
     const fetchInvoices = async () => {
       setLoading(true);
@@ -40,10 +45,8 @@ const Invoices: React.FC<InvoicesProps> = ({ onLogout }) => {
         const params: any = {
           limit: PAGE_SIZE,
           offset: (page - 1) * PAGE_SIZE,
+          ...filters, // Agrega todos los filtros dinámicamente
         };
-        if (searchContrato) {
-          params.contrato_id = searchContrato;
-        }
         const data = await getInvoices(params);
         setInvoices(data.facturas || []);
         setTotalCount(data.totalCount || 0);
@@ -54,15 +57,15 @@ const Invoices: React.FC<InvoicesProps> = ({ onLogout }) => {
       }
     };
     fetchInvoices();
-  }, [page, searchContrato]);
+  }, [page, filters]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  // Manejar el filtro de contrato_id
+  // Manejar el filtro de forma escalable
   const handleFilter = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1); // Reiniciar a la primera página al buscar
-    setSearchContrato(contratoId.trim());
+    // No es necesario actualizar nada más, el useEffect se encarga
   };
 
   return (
@@ -73,21 +76,30 @@ const Invoices: React.FC<InvoicesProps> = ({ onLogout }) => {
           Cerrar sesión
         </button>
       </div>
-      {/* Filtro por contrato_id */}
-      <form className="mb-3 d-flex gap-2" onSubmit={handleFilter}>
+      {/* Formulario de filtros escalable */}
+      <form className="mb-3 d-flex gap-2 flex-wrap" onSubmit={handleFilter}>
         <input
           type="text"
           className="form-control"
-          placeholder="Filtrar por Contrato ID"
-          value={contratoId}
-          onChange={e => setContratoId(e.target.value)}
+          placeholder="Contrato ID"
+          value={filters.contrato_id || ''}
+          onChange={e => setFilters({ ...filters, contrato_id: e.target.value })}
         />
+        <select
+          className="form-control"
+          value={filters.pagada ?? ''}
+          onChange={e => setFilters({ ...filters, pagada: e.target.value === '' ? undefined : e.target.value })}
+        >
+          <option value="">¿Pagada?</option>
+          <option value="true">Sí</option>
+          <option value="false">No</option>
+        </select>
         <button className="btn btn-primary" type="submit">Buscar</button>
         <button
           className="btn btn-secondary"
           type="button"
-          onClick={() => { setContratoId(''); setSearchContrato(''); setPage(1); }}
-          disabled={!contratoId && !searchContrato}
+          onClick={() => setFilters({})}
+          disabled={Object.keys(filters).length === 0}
         >
           Limpiar
         </button>
